@@ -1,9 +1,11 @@
 import { isAddress } from '@ethersproject/address';
-import { useEffect, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import ReCAPTCHA from 'react-google-recaptcha';
 
 import Select from './components/select';
+import SuccessModal from './components/success-modal';
+import ErrorModal from './components/error-modal';
 import logo from './images/logo.svg';
 import ethIcon from './images/eth.png';
 import tigerIcon from './images/tiger.png';
@@ -62,18 +64,29 @@ function App() {
       signature: '',
     },
   });
+  const [pending, setPending] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
   const recaptchaRef = useRef();
 
-  async function onSubmit(data) {
+  const resetCaptcha = useCallback(() => {
+    setValue('signature', '');
+    recaptchaRef.current.reset();
+  }, []);
+
+  const onSubmit = useCallback(async (data) => {
     try {
-      const response = await requestToken(data);
-      recaptchaRef.current.reset();
-      setValue('signature', '');
-      console.log({ response });
+      setPending(true);
+      await requestToken(data);
+      setSuccess(true);
     } catch (error) {
-      console.log(error);
+      console.log(error.response.data);
+      setError(error?.response?.data);
+    } finally {
+      setPending(false);
+      resetCaptcha();
     }
-  }
+  }, []);
 
   useEffect(() => {
     register('signature', { required: true });
@@ -129,9 +142,24 @@ function App() {
             <p className="helper-text">{errorMessages.signature[errors.signature?.type]}</p>
           </section>
 
-          <button onClick={handleSubmit(onSubmit)} className="submit-button">
-            Request
+          <button onClick={handleSubmit(onSubmit)} disabled={pending} className="submit-button">
+            {pending ? <div className="loader"></div> : <span>Request</span>}
           </button>
+
+          <SuccessModal
+            open={success}
+            onClose={() => {
+              setSuccess(false);
+              resetCaptcha();
+            }}
+          />
+          <ErrorModal
+            onClose={() => {
+              setError(null);
+              resetCaptcha();
+            }}
+            error={error}
+          />
         </section>
       </main>
     </>

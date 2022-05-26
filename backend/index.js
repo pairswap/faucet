@@ -1,19 +1,30 @@
 require('dotenv').config();
+
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { ethers } = require('ethers');
-const config = require('./config');
+const { isAddress } = require('@ethersproject/address');
+const { Contract } = require('@ethersproject/contracts');
+const { JsonRpcProvider } = require('@ethersproject/providers');
+const { parseEther } = require('@ethersproject/units');
+const { Wallet } = require('@ethersproject/wallet');
+
 const abi = require('./abi/SampleERC20.json');
+const config = require('./config');
 const { verify } = require('./utils/captcha');
-const { exceededETHBalance, exceedLimitToken } = require('./utils/validation');
+const { exceededETHBalance, exceedLimitToken } = require('./utils/web3');
+const {
+  ETH_PER_REQUEST,
+  TOKEN_PER_REQUEST,
+  SUPPORTED_CHAINS,
+  SUPPORTED_TOKENS,
+} = require('./constants/web3');
+const { INVALID_VALUE, EXCEEDED_LIMIT } = require('./constants/error-code');
 
-const MAX_ETH = '1.0';
-const MAX_ERC20 = '50.0';
-
-const ethPerRequest = ethers.utils.parseEther('0.5');
-const tokenPerRequest = ethers.utils.parseEther('25.0');
+const wallet = Wallet.fromMnemonic(process.env.MNEMOMIC);
+const ethPerRequest = parseEther(ETH_PER_REQUEST);
+const tokenPerRequest = parseEther(TOKEN_PER_REQUEST);
 const app = express();
 
 app.use(bodyParser.json());
@@ -24,20 +35,18 @@ app.post(
   body('account')
     .isString()
     .notEmpty()
-    .custom((value) => ethers.utils.isAddress(value)),
-  body('chainName').isString().notEmpty().isIn(['ganache1', 'ganache2']),
-  body('tokenName')
-    .isString()
-    .notEmpty()
-    .isIn(['ETH', 'TIGER', 'KANGAROO', 'MOUSE', 'MONKEY', 'BUNNY']),
+    .custom((value) => isAddress(value)),
+  body('chainName').isString().notEmpty().isIn(SUPPORTED_CHAINS),
+  body('tokenName').isString().notEmpty().isIn(SUPPORTED_TOKENS),
   body('signature').isString().notEmpty(),
   async function (req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).send({
-        message: 'Invalid value',
+        code: INVALID_VALUE,
         params: errors.array().map((error) => error.param),
       });
+      return;
     }
 
     const { account, chainName, tokenName, signature } = req.body;
@@ -45,24 +54,20 @@ app.post(
     const isHuman = await verify(signature);
 
     if (!isHuman) {
-      res.status(400).send({ message: 'Invalid value', params: ['signature'] });
+      res.status(400).send({ code: INVALID_VALUE, params: ['signature'] });
+      return;
     }
 
     const { rpcUrl, chainId, tokens } = config[chainName];
 
-    const provider = new ethers.providers.JsonRpcProvider(rpcUrl, chainId);
-    const wallet = ethers.Wallet.fromMnemonic(process.env.MNEMOMIC);
+    const provider = new JsonRpcProvider(rpcUrl, chainId);
     const signer = wallet.connect(provider);
 
     if (tokenName === 'ETH') {
-      const exceeded = await exceededETHBalance({
-        account,
-        provider,
-        limit: MAX_ETH,
-      });
+      const exceeded = await exceededETHBalance({ account, provider });
 
       if (exceeded) {
-        res.status(400).send({ message: 'Exceeded limit' });
+        res.status(400).send({ code: EXCEEDED_LIMIT });
         return;
       }
 
@@ -70,23 +75,22 @@ app.post(
         to: account,
         value: ethPerRequest,
       });
-      console.log({ account, hash: tx.hash });
+
+      console.log(`account: ${account} --> hash: ${tx.hash}`);
       res.send({ hash: tx.hash });
     } else {
       const contractAddress = tokens[tokenName];
-      const contract = new ethers.Contract(contractAddress, abi, signer);
-      const exceeded = await exceedLimitToken({
-        account,
-        contract,
-        limit: MAX_ERC20,
-      });
+      const contract = new Contract(contractAddress, abi, signer);
+      const exceeded = await exceedLimitToken({ account, contract });
 
       if (exceeded) {
-        res.status(400).send({ message: 'Exceeded limit' });
+        res.status(400).send({ code: EXCEEDED_LIMIT });
+        return;
       }
 
       const tx = await contract.transfer(account, tokenPerRequest);
-      console.log({ account, hash: tx.hash });
+
+      console.log(`account: ${account} --> hash: ${tx.hash}`);
       res.send({ hash: tx.hash });
     }
   }

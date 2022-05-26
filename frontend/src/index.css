@@ -189,9 +189,9 @@ body {
 
 .dialog__content {
   width: 400px;
-  min-height: 500px;
+  min-height: 400px;
   position: absolute;
-  top: 30%;
+  top: 40%;
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
   z-index: 20;
@@ -219,6 +219,18 @@ body {
   margin: 0;
   color: #fff;
   font-size: 20px;
+}
+
+.dialog-image {
+  margin-top: 2rem;
+  width: 200px;
+  height: 200px;
+}
+
+.dialog-content__title {
+  margin-top: 2rem;
+  font-size: 24px;
+  color: #fff;
 }
 
 .dialog__close-button {
@@ -281,4 +293,90 @@ body {
 
 .captcha {
   margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 24px;
+  }
+
+  .card {
+    margin: 2rem 1rem 0;
+    padding: 1rem;
+    width: unset;
+  }
+
+  .input-group {
+    padding: 1rem 0.5rem 0.5rem;
+  }
+
+  .input {
+    font-size: 12px;
+  }
+
+  .select-group {
+    column-gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .select__value {
+    column-gap: 0.2rem;
+  }
+
+  .select__value-image {
+    width: 30px;
+    height: 30px;
+  }
+
+  .select__value-text {
+    font-size: 12px;
+  }
+
+  .dialog__content {
+    width: 95%;
+  }
+}
+
+.loader {
+  text-align: center;
+  margin: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  position: relative;
+  animation: rotate 1s linear infinite;
+}
+
+.loader::before {
+  content: '';
+  box-sizing: border-box;
+  position: absolute;
+  inset: 0px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  animation: prixClipFix 2s linear infinite;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes prixClipFix {
+  0% {
+    clip-path: polygon(50% 50%, 0 0, 0 0, 0 0, 0 0, 0 0);
+  }
+  25% {
+    clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 0, 100% 0, 100% 0);
+  }
+  50% {
+    clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 100%, 100% 100%, 100% 100%);
+  }
+  75% {
+    clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 100%, 0 100%, 0 100%);
+  }
+  100% {
+    clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 100%, 0 100%, 0 0);
+  }
 }
