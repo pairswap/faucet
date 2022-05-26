@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const request = axios.create({
-  baseURL: 'http://localhost:4001',
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
 export function requestToken({ account, chainName, tokenName, signature }) {
