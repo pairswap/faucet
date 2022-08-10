@@ -3,8 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
+  "scripts": {
+    "dev:backend": "yarn workspace backend dev",
+    "dev:frontend": "yarn workspace frontend dev",
+    "start": "yarn workspace backend start",
+    "build": "yarn workspace frontend build"
+  },
   "workspaces": [
     "backend",
     "frontend"
-  ]
+  ],
+  "dependencies": {
+    "yup": "^0.32.11"
+  }
 }
