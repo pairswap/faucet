@@ -25,11 +25,6 @@ module.exports = {
       'binance-testnet': '0x8d39809294C4130b1A5Bf0476601b6912D57aBA4',
       'fantom-testnet': '0x3f58cE2EFB053CbA709CE526e01A727513Ab985c',
     },
-    ADA: {
-      'polygon-testnet': '0x895eA49304d0365e71375d5125728ccB593B2812',
-      'binance-testnet': '0x082c111286c778835fD09EA3C80115c2dC744cC4',
-      'fantom-testnet': '0x37dF5Bf01eF8512e875a292813AAb5B62dDD9e05',
-    },
   },
   chainInfos: {
     'polygon-testnet': {

@@ -17,7 +17,6 @@ import kangarooIcon from './images/kangaroo.png';
 import mouseIcon from './images/mouse.png';
 import monkeyIcon from './images/monkey.png';
 import bunnyIcon from './images/bunny.png';
-import adaIcon from './images/ada.png';
 import { requestToken } from './utils/request';
 
 const chains = [
@@ -32,11 +31,10 @@ const tokens = [
   { label: '25 MOUSE', value: 'MOUSE', image: mouseIcon },
   { label: '25 MONKEY', value: 'MONKEY', image: monkeyIcon },
   { label: '25 BUNNY', value: 'BUNNY', image: bunnyIcon },
-  { label: '25 ADA', value: 'ADA', image: adaIcon },
 ];
 
 const SUPPORTED_CHAINS = ['binance-testnet', 'polygon-testnet', 'fantom-testnet'];
-const SUPPORTED_TOKENS = ['TIGER', 'KANGAROO', 'MOUSE', 'MONKEY', 'BUNNY', 'ADA'];
+const SUPPORTED_TOKENS = ['TIGER', 'KANGAROO', 'MOUSE', 'MONKEY', 'BUNNY'];
 
 const schema = yup.object({
   account: yup
