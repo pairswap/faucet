@@ -2,52 +2,57 @@ import { isAddress } from '@ethersproject/address';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import ReCAPTCHA from 'react-google-recaptcha';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 
 import Select from './components/select';
 import SuccessModal from './components/success-modal';
 import ErrorModal from './components/error-modal';
 import logo from './images/logo.svg';
-import ethIcon from './images/eth.png';
+import bnbIcon from './images/bnb.png';
+import maticIcon from './images/matic.png';
+import ftmIcon from './images/ftm.png';
 import tigerIcon from './images/tiger.png';
 import kangarooIcon from './images/kangaroo.png';
 import mouseIcon from './images/mouse.png';
 import monkeyIcon from './images/monkey.png';
 import bunnyIcon from './images/bunny.png';
+import adaIcon from './images/ada.png';
 import { requestToken } from './utils/request';
 
 const chains = [
-  { label: 'KO Chain', value: 'ganache1', image: ethIcon },
-  { label: 'Mazze Chain', value: 'ganache2', image: ethIcon },
+  { label: 'Binance Testnet', value: 'binance-testnet', image: bnbIcon },
+  { label: 'Polyon Testnet', value: 'polygon-testnet', image: maticIcon },
+  { label: 'Fantom Testnet', value: 'fantom-testnet', image: ftmIcon },
 ];
 
 const tokens = [
-  { label: '0.5 ETH', value: 'ETH', image: ethIcon },
   { label: '25 TIGER', value: 'TIGER', image: tigerIcon },
   { label: '25 KANGAROO', value: 'KANGAROO', image: kangarooIcon },
   { label: '25 MOUSE', value: 'MOUSE', image: mouseIcon },
   { label: '25 MONKEY', value: 'MONKEY', image: monkeyIcon },
   { label: '25 BUNNY', value: 'BUNNY', image: bunnyIcon },
+  { label: '25 ADA', value: 'ADA', image: adaIcon },
 ];
 
-const validationRules = {
-  account: {
-    required: true,
-    validate: (value) => isAddress(value),
-  },
-  signature: {
-    required: true,
-  },
-};
+const SUPPORTED_CHAINS = ['binance-testnet', 'polygon-testnet', 'fantom-testnet'];
+const SUPPORTED_TOKENS = ['TIGER', 'KANGAROO', 'MOUSE', 'MONKEY', 'BUNNY', 'ADA'];
 
-const errorMessages = {
-  account: {
-    required: 'Wallet address is required',
-    validate: 'Wallet address is invalid',
-  },
-  signature: {
-    required: 'Please verify',
-  },
-};
+const schema = yup.object({
+  account: yup
+    .string()
+    .required('Account is required')
+    .test('isValid', 'Account is invalid', (value) => isAddress(value)),
+  chainName: yup
+    .string()
+    .required('Chain name is required')
+    .oneOf(SUPPORTED_CHAINS, 'Unsupported chain'),
+  tokenName: yup
+    .string()
+    .required('Token name is required')
+    .oneOf(SUPPORTED_TOKENS, 'Unsupported token'),
+  signature: yup.string().required('Signature is required'),
+});
 
 function App() {
   const {
@@ -56,32 +61,29 @@ function App() {
     handleSubmit,
     register,
     setValue,
-  } = useForm({
-    defaultValues: {
-      account: '',
-      chainName: '',
-      tokenName: '',
-      signature: '',
-    },
-  });
+    getValues,
+  } = useForm({ resolver: yupResolver(schema) });
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [hash, setHash] = useState(null);
   const [error, setError] = useState(null);
   const recaptchaRef = useRef();
+  console.log({ errors });
 
   const resetCaptcha = useCallback(() => {
     setValue('signature', '');
     recaptchaRef.current.reset();
   }, []);
 
-  const onSubmit = useCallback(async (data) => {
+  const onSubmit = useCallback(async (payload) => {
     try {
       setPending(true);
-      await requestToken(data);
+      const { data } = await requestToken(payload);
       setSuccess(true);
+      setHash(data);
     } catch (error) {
-      console.log(error.response.data);
-      setError(error?.response?.data);
+      console.error(error);
+      setError(error);
     } finally {
       setPending(false);
       resetCaptcha();
@@ -89,7 +91,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    register('signature', { required: true });
+    register('signature');
   }, []);
 
   return (
@@ -111,10 +113,10 @@ function App() {
               id="wallet"
               placeholder="Enter your wallet address"
               className="input"
-              {...register('account', validationRules.account)}
+              {...register('account')}
             />
           </section>
-          <p className="helper-text">{errorMessages.account[errors.account?.type]}</p>
+          <p className="helper-text">{errors.account?.message}</p>
 
           <section className="select-group">
             <Select
@@ -139,7 +141,7 @@ function App() {
                 clearErrors('signature');
               }}
             />
-            <p className="helper-text">{errorMessages.signature[errors.signature?.type]}</p>
+            <p className="helper-text">{errors.signature?.message}</p>
           </section>
 
           <button onClick={handleSubmit(onSubmit)} disabled={pending} className="submit-button">
@@ -148,6 +150,8 @@ function App() {
 
           <SuccessModal
             open={success}
+            chainName={getValues('chainName')}
+            hash={hash}
             onClose={() => {
               setSuccess(false);
               resetCaptcha();

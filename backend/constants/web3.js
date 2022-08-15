@@ -1,14 +1,10 @@
-const MAX_ETH = '1.0';
 const MAX_ERC20 = '50.0';
-const ETH_PER_REQUEST = '0.5';
 const TOKEN_PER_REQUEST = '25.0';
-const SUPPORTED_CHAINS = ['ganache1', 'ganache2'];
-const SUPPORTED_TOKENS = ['ETH', 'TIGER', 'KANGAROO', 'MOUSE', 'MONKEY', 'BUNNY'];
+const SUPPORTED_CHAINS = ['binance-testnet', 'polygon-testnet', 'fantom-testnet'];
+const SUPPORTED_TOKENS = ['TIGER', 'KANGAROO', 'MOUSE', 'MONKEY', 'BUNNY', 'ADA'];
 
 module.exports = {
-  MAX_ETH,
   MAX_ERC20,
-  ETH_PER_REQUEST,
   TOKEN_PER_REQUEST,
   SUPPORTED_CHAINS,
   SUPPORTED_TOKENS,
