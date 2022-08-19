@@ -315,9 +315,10 @@ p {
 
 .heading {
   color: #fff;
-  font-size: 20px;
   font-weight: 500;
   margin-bottom: 1rem;
+  font-size: 22px;
+  text-align: center;
 }
 
 .transaction {
@@ -329,7 +330,7 @@ p {
   color: #fff;
 }
 
-.txhash {
+.info {
   color: rgba(255, 255, 255, 0.3);
   white-space: nowrap;
 }

@@ -20,6 +20,13 @@ import monkeyIcon from './images/monkey.png';
 import bunnyIcon from './images/bunny.png';
 import * as api from './utils/api';
 
+const chainNames = {
+  'binance-testnet': 'Binance Testnet',
+  'polygon-testnet': 'Polyon Testnet',
+  'fantom-testnet': 'Fantom Testnet',
+  'avaxc-testnet': 'Avalanche Testnet',
+};
+
 const chains = [
   { label: 'Binance Testnet', value: 'binance-testnet', image: bnbIcon },
   { label: 'Polyon Testnet', value: 'polygon-testnet', image: maticIcon },
@@ -62,8 +69,9 @@ function App() {
     register,
     setValue,
   } = useForm({ resolver: yupResolver(schema) });
+  const [successTransactions, setSuccessTransactions] = useState(null);
+  const [waitingTransactions, setWaitingTransactions] = useState(null);
   const [processingTransactions, setProcessingTransactions] = useState(null);
-  const [transactions, setTransactions] = useState(null);
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -77,8 +85,9 @@ function App() {
   async function getQueue() {
     try {
       const { data } = await api.getQueue();
-      setTransactions(data.last);
-      setProcessingTransactions(data.current);
+      setSuccessTransactions(data.success);
+      setWaitingTransactions(data.waiting);
+      setProcessingTransactions(data.processing);
     } catch (error) {}
   }
 
@@ -162,24 +171,40 @@ function App() {
             {pending ? <div className="loader"></div> : <span>Request</span>}
           </button>
         </section>
-        {processingTransactions && processingTransactions.length > 0 ? (
+        {waitingTransactions && waitingTransactions.length > 0 ? (
           <section className="card">
-            <p className="heading">Processing transactions</p>
-            {processingTransactions.reverse().map(({ account, tokenName }) => (
+            <p className="heading">Transactions in the queue</p>
+            {waitingTransactions.map(({ account, tokenName, chainName }) => (
               <article className="transaction">
-                <p className="account">Account: {account}</p>
-                <p className="txhash">Token: {tokenName}</p>
+                <p className="account">Address: {account}</p>
+                <p className="info">Chain: {chainNames[chainName]}</p>
+                <p className="info">Token: {tokenName}</p>
               </article>
             ))}
           </section>
         ) : null}
-        {transactions && transactions.length > 0 ? (
+        {processingTransactions && processingTransactions.length > 0 ? (
           <section className="card">
-            <p className="heading">Last 5 transactions</p>
-            {transactions.map(({ account, txHash }) => (
+            <p className="heading">Processing transactions</p>
+            {processingTransactions.map(({ account, tokenName, chainName, txHash }) => (
               <article className="transaction">
-                <p className="account">Account: {account}</p>
-                <p className="txhash">Hash: {txHash}</p>
+                <p className="account">Address: {account}</p>
+                <p className="info">Chain: {chainNames[chainName]}</p>
+                <p className="info">Token: {tokenName}</p>
+                <p className="info">Hash: {txHash}</p>
+              </article>
+            ))}
+          </section>
+        ) : null}
+        {successTransactions && successTransactions.length > 0 ? (
+          <section className="card">
+            <p className="heading">Last 5 successful transactions</p>
+            {successTransactions.map(({ account, tokenName, chainName, txHash }) => (
+              <article className="transaction">
+                <p className="account">Address: {account}</p>
+                <p className="info">Chain: {chainNames[chainName]}</p>
+                <p className="info">Token: {tokenName}</p>
+                <p className="info">Hash: {txHash}</p>
               </article>
             ))}
           </section>

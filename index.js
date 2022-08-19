@@ -25,7 +25,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('dist'));
 
-const recipients = [];
+let success = [];
+let processing = [];
 
 const queue = async.queue(async (task) => {
   const { contract, account, chainName, tokenName } = task;
@@ -33,18 +34,22 @@ const queue = async.queue(async (task) => {
 
   try {
     const tx = await contract.transfer(account, tokenPerRequest);
+    const info = { account, chainName, tokenName, txHash: tx.hash };
+    console.log(info);
+    processing.push(info);
+
     await tx.wait();
 
-    console.log({ account, chainName, tokenName, txHash: tx.hash });
+    processing = processing.filter(({ txHash }) => txHash !== tx.hash);
+    success.push(info);
 
-    recipients.push({ account, txHash: tx.hash });
-    while (recipients.length > config.queueSize) {
-      recipients.shift();
+    while (success.length > 5) {
+      success.shift();
     }
   } catch (error) {
     console.log(`Failure: ${account}`);
   }
-}, 1);
+}, 3);
 
 const schema = yup.object({
   account: yup
@@ -64,8 +69,9 @@ const schema = yup.object({
 
 app.get('/queue', function (_, res) {
   return res.status(200).json({
-    last: [...recipients],
-    current: [...queue],
+    success: [...success],
+    waiting: [...queue],
+    processing: [...processing],
   });
 });
 
@@ -98,12 +104,23 @@ app.post('/queue/add', async function (req, res) {
     Number(formatEther(tokenBalance)) + Number(config.tokenPerRequest) >=
     Number(config.maxToken)
   ) {
-    return res.status(400).send({ message: 'Token request reaches the limit' });
+    return res
+      .status(400)
+      .send({ message: 'Your tokens plus the requested tokens must less than 50' });
   }
 
   if (queue.length() >= config.queueSize) {
     return res.status(400).send({
       message: 'Queue is full. Try again later.',
+    });
+  }
+
+  if (
+    [...queue].find((t) => t.account === account) ||
+    processing.find((t) => t.account === account)
+  ) {
+    return res.status(400).send({
+      message: 'You have a pending transaction. Try again later.',
     });
   }
 
