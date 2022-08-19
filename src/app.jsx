@@ -1,5 +1,5 @@
 import { isAddress } from '@ethersproject/address';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -12,17 +12,19 @@ import logo from './images/logo.svg';
 import bnbIcon from './images/bnb.png';
 import maticIcon from './images/matic.png';
 import ftmIcon from './images/ftm.png';
+import avaxIcon from './images/avax.png';
 import tigerIcon from './images/tiger.png';
 import kangarooIcon from './images/kangaroo.png';
 import mouseIcon from './images/mouse.png';
 import monkeyIcon from './images/monkey.png';
 import bunnyIcon from './images/bunny.png';
-import { requestToken } from './utils/request';
+import * as api from './utils/api';
 
 const chains = [
   { label: 'Binance Testnet', value: 'binance-testnet', image: bnbIcon },
   { label: 'Polyon Testnet', value: 'polygon-testnet', image: maticIcon },
   { label: 'Fantom Testnet', value: 'fantom-testnet', image: ftmIcon },
+  { label: 'Avalanche Testnet', value: 'avaxc-testnet', image: avaxIcon },
 ];
 
 const tokens = [
@@ -33,7 +35,7 @@ const tokens = [
   { label: '25 BUNNY', value: 'BUNNY', image: bunnyIcon },
 ];
 
-const SUPPORTED_CHAINS = ['binance-testnet', 'polygon-testnet', 'fantom-testnet'];
+const SUPPORTED_CHAINS = ['binance-testnet', 'polygon-testnet', 'fantom-testnet', 'avaxc-testnet'];
 const SUPPORTED_TOKENS = ['TIGER', 'KANGAROO', 'MOUSE', 'MONKEY', 'BUNNY'];
 
 const schema = yup.object({
@@ -59,26 +61,32 @@ function App() {
     handleSubmit,
     register,
     setValue,
-    getValues,
   } = useForm({ resolver: yupResolver(schema) });
+  const [processingTransactions, setProcessingTransactions] = useState(null);
+  const [transactions, setTransactions] = useState(null);
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [hash, setHash] = useState(null);
   const [error, setError] = useState(null);
   const recaptchaRef = useRef();
-  console.log({ errors });
 
-  const resetCaptcha = useCallback(() => {
+  function resetCaptcha() {
     setValue('signature', '');
     recaptchaRef.current.reset();
-  }, []);
+  }
 
-  const onSubmit = useCallback(async (payload) => {
+  async function getQueue() {
+    try {
+      const { data } = await api.getQueue();
+      setTransactions(data.last);
+      setProcessingTransactions(data.current);
+    } catch (error) {}
+  }
+
+  async function onSubmit(payload) {
     try {
       setPending(true);
-      const { data } = await requestToken(payload);
+      await api.addToQueue(payload);
       setSuccess(true);
-      setHash(data);
     } catch (error) {
       console.error(error);
       setError(error);
@@ -86,10 +94,18 @@ function App() {
       setPending(false);
       resetCaptcha();
     }
-  }, []);
+  }
 
   useEffect(() => {
     register('signature');
+  }, []);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      getQueue();
+    }, 1000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
@@ -145,24 +161,43 @@ function App() {
           <button onClick={handleSubmit(onSubmit)} disabled={pending} className="submit-button">
             {pending ? <div className="loader"></div> : <span>Request</span>}
           </button>
-
-          <SuccessModal
-            open={success}
-            chainName={getValues('chainName')}
-            hash={hash}
-            onClose={() => {
-              setSuccess(false);
-              resetCaptcha();
-            }}
-          />
-          <ErrorModal
-            onClose={() => {
-              setError(null);
-              resetCaptcha();
-            }}
-            error={error}
-          />
         </section>
+        {processingTransactions && processingTransactions.length > 0 ? (
+          <section className="card">
+            <p className="heading">Processing transactions</p>
+            {processingTransactions.reverse().map(({ account, tokenName }) => (
+              <article className="transaction">
+                <p className="account">Account: {account}</p>
+                <p className="txhash">Token: {tokenName}</p>
+              </article>
+            ))}
+          </section>
+        ) : null}
+        {transactions && transactions.length > 0 ? (
+          <section className="card">
+            <p className="heading">Last 5 transactions</p>
+            {transactions.map(({ account, txHash }) => (
+              <article className="transaction">
+                <p className="account">Account: {account}</p>
+                <p className="txhash">Hash: {txHash}</p>
+              </article>
+            ))}
+          </section>
+        ) : null}
+        <SuccessModal
+          open={success}
+          onClose={() => {
+            setSuccess(false);
+            resetCaptcha();
+          }}
+        />
+        <ErrorModal
+          error={error}
+          onClose={() => {
+            setError(null);
+            resetCaptcha();
+          }}
+        />
       </main>
     </>
   );
