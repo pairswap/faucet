@@ -1,3 +1,17 @@
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(48, 87, 254, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(91, 158, 255, 0.5);
+  border-radius: 10px;
+  border: 2px solid rgba(161, 103, 255, 0.5);
+}
+
 body {
   margin: 0;
   font-family: 'Poppins', sans-serif;
@@ -5,6 +19,10 @@ body {
   background-repeat: no-repeat;
   background-size: cover;
   background-color: #02032e;
+}
+
+p {
+  margin: 0;
 }
 
 .header {
@@ -46,9 +64,9 @@ body {
 .card {
   display: flex;
   flex-direction: column;
-  width: 600px;
-  margin: 6rem auto 0;
-  padding: 0.75rem 1.25rem 1.5rem;
+  width: 800px;
+  margin: 3rem auto 0;
+  padding: 1rem;
   border-radius: 22px;
   background: linear-gradient(
     123.31deg,
@@ -62,7 +80,7 @@ body {
 
 .title {
   margin-top: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   font-size: 32px;
   text-align: center;
   color: #fff;
@@ -233,13 +251,6 @@ body {
   color: #fff;
 }
 
-.dialog-content__text {
-  display: block;
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-  color: #fff;
-}
-
 .dialog__close-button {
   background: none;
   border: none;
@@ -302,7 +313,28 @@ body {
   margin-top: 1rem;
 }
 
-@media (max-width: 640px) {
+.heading {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.transaction {
+  margin-bottom: 1rem;
+}
+
+.account {
+  font-weight: 500;
+  color: #fff;
+}
+
+.txhash {
+  color: rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
   .title {
     font-size: 24px;
   }
@@ -311,6 +343,7 @@ body {
     margin: 2rem 1rem 0;
     padding: 1rem;
     width: unset;
+    overflow: auto;
   }
 
   .input-group {
