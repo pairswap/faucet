@@ -22,14 +22,14 @@ import * as api from './utils/api';
 
 const chainNames = {
   'binance-testnet': 'Binance Testnet',
-  'polygon-testnet': 'Polyon Testnet',
+  'polygon-testnet': 'Polygon Testnet',
   'fantom-testnet': 'Fantom Testnet',
   'avaxc-testnet': 'Avalanche Testnet',
 };
 
 const chains = [
   { label: 'Binance Testnet', value: 'binance-testnet', image: bnbIcon },
-  { label: 'Polyon Testnet', value: 'polygon-testnet', image: maticIcon },
+  { label: 'Polygon Testnet', value: 'polygon-testnet', image: maticIcon },
   { label: 'Fantom Testnet', value: 'fantom-testnet', image: ftmIcon },
   { label: 'Avalanche Testnet', value: 'avaxc-testnet', image: avaxIcon },
 ];
