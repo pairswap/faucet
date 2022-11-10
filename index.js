@@ -41,12 +41,12 @@ function getQueueItems() {
 
 function createQueue() {
   return async.queue(async (task) => {
-    const { contract, account, chainName, tokenName } = task;
+    const { contract, account, chainName, tokenName, ip } = task;
     console.log(`Transfering to ${account}`);
 
     try {
       const tx = await contract.transfer(account, tokenPerRequest);
-      const info = { account, chainName, tokenName, txHash: tx.hash };
+      const info = { ip, account, chainName, tokenName, txHash: tx.hash };
       console.log(info);
       processing.push(info);
 
@@ -94,9 +94,6 @@ app.get('/queue', function (_, res) {
 
 app.post('/queue/add', async function (req, res) {
   let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  ip = ip.replace(/\./g, '_');
-  console.log(`Adding ${ip} to the queue`);
-
   const { account, chainName, tokenName, signature } = req.body;
 
   try {
@@ -146,7 +143,7 @@ app.post('/queue/add', async function (req, res) {
       });
     }
 
-    queue.push({ account, contract, chainName, tokenName });
+    queue.push({ ip, account, contract, chainName, tokenName });
 
     return res.status(200).send({ message: 'Request added to the queue' });
   } catch (error) {
