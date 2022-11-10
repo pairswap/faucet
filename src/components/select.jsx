@@ -4,8 +4,13 @@ import Modal from '../components/modal';
 import chevronDownIcon from '../images/chevron-down.svg';
 import classname from '../utils/classname';
 
+function randomValue(values) {
+  const index = Math.floor(Math.random() * values.length);
+  return values[index];
+}
+
 function Select({ label, dialogLabel, options, onChange }) {
-  const [value, setValue] = useState(options[0]);
+  const [value, setValue] = useState(randomValue(options));
   const [openOption, setOpenOption] = useState(false);
 
   useEffect(() => {
