@@ -1,24 +1,20 @@
 require('dotenv').config();
 
 const async = require('async');
-const axios = require('axios');
 const cors = require('cors');
 const express = require('express');
 const yup = require('yup');
-const { Contract } = require('@ethersproject/contracts');
-const { JsonRpcProvider } = require('@ethersproject/providers');
-const { Wallet } = require('@ethersproject/wallet');
-const { formatEther, parseEther } = require('@ethersproject/units');
 const { isAddress } = require('@ethersproject/address');
+const { PublicKey } = require('@solana/web3.js');
 
-const abi = require('./abi.json');
-const config = require('./config');
+const config = require('./app/config');
+const captcha = require('./app/captcha');
+const ethereum = require('./app/ethereum');
+const solana = require('./app/solana');
 
 const supportedChains = Object.keys(config.chainInfos);
 const supportedTokens = Object.keys(config.tokenInfos);
 
-const wallet = Wallet.fromMnemonic(process.env.MNEMOMIC);
-const tokenPerRequest = parseEther(config.tokenPerRequest);
 const app = express();
 app.enable('trust proxy');
 app.use(cors());
@@ -28,6 +24,14 @@ app.use(express.static('dist'));
 let success = [];
 let processing = [];
 let queues = {};
+
+const providers = {
+  'polygon-testnet': ethereum,
+  'binance-testnet': ethereum,
+  'fantom-testnet': ethereum,
+  'avaxc-testnet': ethereum,
+  'solana-devnet': solana,
+};
 
 function getQueueItems() {
   let items = [];
@@ -41,19 +45,18 @@ function getQueueItems() {
 
 function createQueue() {
   return async.queue(async (task) => {
-    const { contract, account, chainName, tokenName, ip } = task;
-    console.log(`Transfering to ${account}`);
+    const { ip, account, chainName, tokenName } = task;
+    console.log(`Pending: ${account}`);
+    const info = { ip, account, chainName, tokenName };
+    processing.push(info);
 
     try {
-      const tx = await contract.transfer(account, tokenPerRequest);
-      const info = { ip, account, chainName, tokenName, txHash: tx.hash };
-      console.log(info);
-      processing.push(info);
+      const txHash = await providers[chainName].transfer({ account, chainName, tokenName });
 
-      await tx.wait();
-
-      processing = processing.filter(({ txHash }) => txHash !== tx.hash);
-      success.push(info);
+      processing = processing.filter((p) => p.account !== account);
+      success.push({ ...info, txHash });
+      console.log(`Success: ${account}`);
+      console.log({ ...info, txHash });
 
       while (success.length > 5) {
         success.shift();
@@ -72,7 +75,13 @@ const schema = yup.object({
   account: yup
     .string()
     .required('Account is required')
-    .test('isValid', 'Account is invalid', (value) => isAddress(value)),
+    .test('isValid', 'Account is invalid', function (value) {
+      if (this.parent.chainName === 'solana-devnet') {
+        return PublicKey.isOnCurve(new PublicKey(value));
+      } else {
+        return isAddress(value);
+      }
+    }),
   chainName: yup
     .string()
     .required('Chain name is required')
@@ -93,40 +102,18 @@ app.get('/queue', function (_, res) {
 });
 
 app.post('/queue/add', async function (req, res) {
-  let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const { account, chainName, tokenName, signature } = req.body;
 
   try {
     await schema.validate({ account, chainName, tokenName, signature });
+    await captcha.validate({ signature });
+    await providers[chainName].validate({ account, chainName, tokenName });
   } catch (error) {
-    return res.status(400).send(error);
+    return res.status(400).send({ message: error.message });
   }
-
-  const { data } = await axios.post(
-    `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET}&response=${signature}`
-  );
-
-  if (!data.success) {
-    return res.status(400).send({ message: 'Signature is invalid' });
-  }
-  const { chainId, rpcUrl } = config.chainInfos[chainName];
-  const tokenAddress = config.tokenInfos[tokenName][chainName];
 
   try {
-    const provider = new JsonRpcProvider(rpcUrl, chainId);
-    const signer = wallet.connect(provider);
-    const contract = new Contract(tokenAddress, abi, signer);
     const queue = queues[chainName];
-
-    const tokenBalance = await contract.balanceOf(account);
-    if (
-      Number(formatEther(tokenBalance)) + Number(config.tokenPerRequest) >=
-      Number(config.maxToken)
-    ) {
-      return res
-        .status(400)
-        .send({ message: 'Your tokens plus the requested tokens must less than 50' });
-    }
 
     if (queue.length() >= config.queueSize) {
       return res.status(400).send({
@@ -143,11 +130,15 @@ app.post('/queue/add', async function (req, res) {
       });
     }
 
-    queue.push({ ip, account, contract, chainName, tokenName });
+    queue.push({
+      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      account,
+      chainName,
+      tokenName,
+    });
 
     return res.status(200).send({ message: 'Request added to the queue' });
   } catch (error) {
-    console.error(error);
     return res.status(400).send({
       message: 'An unknown error occurred. Please try again later.',
     });

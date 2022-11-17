@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { PublicKey } from '@solana/web3.js';
 
 import Select from './components/select';
 import SuccessModal from './components/success-modal';
@@ -13,6 +14,7 @@ import bnbIcon from './images/bnb.png';
 import maticIcon from './images/matic.png';
 import ftmIcon from './images/ftm.png';
 import avaxIcon from './images/avax.png';
+import solIcon from './images/sol.png';
 import tigerIcon from './images/tiger.png';
 import kangarooIcon from './images/kangaroo.png';
 import mouseIcon from './images/mouse.png';
@@ -25,6 +27,7 @@ const chainNames = {
   'polygon-testnet': 'Polygon Testnet',
   'fantom-testnet': 'Fantom Testnet',
   'avaxc-testnet': 'Avalanche Testnet',
+  'solana-devnet': 'Solana Devnet',
 };
 
 const chains = [
@@ -32,6 +35,7 @@ const chains = [
   { label: 'Polygon Testnet', value: 'polygon-testnet', image: maticIcon },
   { label: 'Fantom Testnet', value: 'fantom-testnet', image: ftmIcon },
   { label: 'Avalanche Testnet', value: 'avaxc-testnet', image: avaxIcon },
+  { label: 'Solana Devnet', value: 'solana-devnet', image: solIcon },
 ];
 
 const tokens = [
@@ -42,14 +46,27 @@ const tokens = [
   { label: '25 BUNNY', value: 'BUNNY', image: bunnyIcon },
 ];
 
-const SUPPORTED_CHAINS = ['binance-testnet', 'polygon-testnet', 'fantom-testnet', 'avaxc-testnet'];
+const SUPPORTED_CHAINS = [
+  'binance-testnet',
+  'polygon-testnet',
+  'fantom-testnet',
+  'avaxc-testnet',
+  'solana-devnet',
+];
+
 const SUPPORTED_TOKENS = ['TIGER', 'KANGAROO', 'MOUSE', 'MONKEY', 'BUNNY'];
 
 const schema = yup.object({
   account: yup
     .string()
     .required('Account is required')
-    .test('isValid', 'Account is invalid', (value) => isAddress(value)),
+    .test('isValid', 'Account is invalid', function (value) {
+      if (this.parent.chainName === 'solana-devnet') {
+        return PublicKey.isOnCurve(new PublicKey(value));
+      } else {
+        return isAddress(value);
+      }
+    }),
   chainName: yup
     .string()
     .required('Chain name is required')
@@ -186,12 +203,11 @@ function App() {
         {processingTransactions && processingTransactions.length > 0 ? (
           <section className="card">
             <p className="heading">Processing transactions</p>
-            {processingTransactions.map(({ account, tokenName, chainName, txHash }) => (
+            {processingTransactions.map(({ account, tokenName, chainName }) => (
               <article className="transaction">
                 <p className="account">Address: {account}</p>
                 <p className="info">Chain: {chainNames[chainName]}</p>
                 <p className="info">Token: {tokenName}</p>
-                <p className="info">Hash: {txHash}</p>
               </article>
             ))}
           </section>
