@@ -62,6 +62,7 @@ function createQueue() {
         success.shift();
       }
     } catch (error) {
+      console.error(error);
       console.log(`Failure: ${account}`);
     }
   }, 1);
